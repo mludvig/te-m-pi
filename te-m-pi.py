@@ -26,7 +26,6 @@ class w1therm(object):
         return slaves
 
     def update_readings(self):
-        print("update_readings @ %s" % time.time())
         readings = {}
         for th in self.thermometers:
             with open(os.path.join(self.W1_DIR, th, "w1_slave"), "r") as f:
@@ -38,7 +37,6 @@ class w1therm(object):
                 temp = round(float(m.group(1))/1000, 1)
             readings[th] = temp
         self.readings = readings
-        print("readings: %r" % self.readings)
         return readings
 
 class nextion(object):
@@ -83,9 +81,18 @@ if __name__ == "__main__":
     update_readings()
 
     nx.send("t0.font=7")
+    nx.send("t1.font=3")
+    nx.send("t2.font=2")
+
     while True:
         val="%0.1f C" % (w1.readings[w1.thermometers[0]])
         nx.send("t0.txt=\"%s\"" % val)
+
+        val="Probe:"
+        nx.send("t1.txt=\"%s\"" % val)
+
+        val=w1.thermometers[0]
+        nx.send("t2.txt=\"%s\"" % val)
 
         val = datetime.strftime(datetime.now(), "%Y/%m/%d %H:%M")
         nx.send("t3.txt=\"%s\"" % val)
