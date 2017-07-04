@@ -7,6 +7,7 @@ import time
 import serial
 import re
 import os
+import json
 
 from threading import Timer
 from datetime import datetime
@@ -101,15 +102,33 @@ class awsiot(object):
     def publish(self, topic, message):
 	    self.mqtt.publish(topic, message, 1)
 
+def get_rpi_serial_number():
+    serial = "UNKNOWN_00000000"
+    with open("/proc/cpuinfo", "r") as cpuinfo:
+        for line in cpuinfo.readlines():
+            m=re.match("Serial\s*:\s*(\w+)", line)
+            if m:
+                serial = m.group(1)
+                break
+    return serial
+
 def update_readings():
     Timer(10, update_readings).start()
     w1.update_readings()
     for probe in w1.thermometers:
-        topic = "test/%s" % probe
-        message = '{ "temp": %0.1f }' % (w1.readings[probe])
+        topic = "te-m-pi/%s/%s" % (client_id, probe)
+        payload = {
+            "ClientId": client_id,
+            "ProbeId": probe,
+            "ProbeType": "Temperature",
+            "Temperature": ("%0.1f" % w1.readings[probe])
+        }
+        message = json.dumps(payload)
         iot.publish(topic, message)
 
 if __name__ == "__main__":
+    client_id = get_rpi_serial_number()
+
     w1 = w1therm()
     nx = nextion(port="/dev/ttyAMA0")
     iot = awsiot(endpoint, client_id, root_ca, cert, key)
