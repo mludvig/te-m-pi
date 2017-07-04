@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# Temperature and Humidity meter with MQTT support
+# By Michael Ludvig, Enterprise IT Ltd, New Zealand
+
 import time
 import serial
 import re
@@ -7,9 +10,17 @@ import os
 
 from threading import Timer
 from datetime import datetime
+from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
+
+client_id = "te-m-pi"
+endpoint = "a2yydx75cijpoy.iot.ap-southeast-2.amazonaws.com"
+root_ca = "certs/root-ca.pem"
+cert = "certs/certificate.pem.crt"
+key = "certs/private.pem.key"
 
 w1 = None
 nx = None
+iot = None
 
 class w1therm(object):
     W1_DIR="/sys/devices/w1_bus_master1"
@@ -70,13 +81,38 @@ class nextion(object):
                 break
         return buf
 
+class awsiot(object):
+    def __init__(self, endpoint, client_id, root_ca, cert, key):
+        # Init AWSIoTMQTTClient
+        self.mqtt = AWSIoTMQTTClient(client_id)
+        self.mqtt.configureEndpoint(endpoint, 8883)
+        self.mqtt.configureCredentials(root_ca, key, cert)
+
+        # AWSIoTMQTTClient connection configuration
+        self.mqtt.configureAutoReconnectBackoffTime(1, 32, 20)
+        self.mqtt.configureOfflinePublishQueueing(-1)  # Infinite offline Publish queueing
+        self.mqtt.configureDrainingFrequency(2)  # Draining: 2 Hz
+        self.mqtt.configureConnectDisconnectTimeout(10)  # 10 sec
+        self.mqtt.configureMQTTOperationTimeout(5)  # 5 sec
+
+        # Connect to AWS IoT
+        self.mqtt.connect()
+
+    def publish(self, topic, message):
+	    self.mqtt.publish(topic, message, 1)
+
 def update_readings():
     Timer(10, update_readings).start()
     w1.update_readings()
+    for probe in w1.thermometers:
+        topic = "test/%s" % probe
+        message = '{ "temp": %0.1f }' % (w1.readings[probe])
+        iot.publish(topic, message)
 
 if __name__ == "__main__":
     w1 = w1therm()
     nx = nextion(port="/dev/ttyAMA0")
+    iot = awsiot(endpoint, client_id, root_ca, cert, key)
 
     update_readings()
 
