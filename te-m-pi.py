@@ -12,6 +12,7 @@ import json
 from threading import Timer
 from datetime import datetime
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
+import Adafruit_ADS1x15
 
 client_id = "te-m-pi"
 endpoint = "a2yydx75cijpoy.iot.ap-southeast-2.amazonaws.com"
@@ -22,6 +23,10 @@ key = "certs/private.pem.key"
 w1 = None
 nx = None
 iot = None
+adc = None
+
+# ADS1115 supports up to 4 channels, put the channel IDs in the list
+adc_channels = [ 0 ]
 
 class w1therm(object):
     W1_DIR="/sys/devices/w1_bus_master1"
@@ -114,6 +119,8 @@ def get_rpi_serial_number():
 
 def update_readings():
     Timer(10, update_readings).start()
+
+    # Temperature probe(s)
     w1.update_readings()
     for probe in w1.thermometers:
         topic = "te-m-pi/%s/%s" % (client_id, probe)
@@ -121,7 +128,21 @@ def update_readings():
             "ClientId": client_id,
             "ProbeId": probe,
             "ProbeType": "Temperature",
-            "Temperature": ("%0.1f" % w1.readings[probe])
+            "Value": round(w1.readings[probe], 1)
+        }
+        message = json.dumps(payload)
+        iot.publish(topic, message)
+
+    # ADC Probes
+    for channel in adc_channels:
+        channel_reading = adc.read_adc(channel, gain=1)
+        channel_name = "adc%d" % (channel)
+        topic = "te-m-pi/%s/%s" % (client_id, channel_name)
+        payload = {
+            "ClientId": client_id,
+            "ProbeId": channel_name,
+            "ProbeType": "ADC",
+            "Value": channel_reading
         }
         message = json.dumps(payload)
         iot.publish(topic, message)
@@ -132,6 +153,7 @@ if __name__ == "__main__":
     w1 = w1therm()
     nx = nextion(port="/dev/ttyAMA0")
     iot = awsiot(endpoint, client_id, root_ca, cert, key)
+    adc = Adafruit_ADS1x15.ADS1115()
 
     update_readings()
 
