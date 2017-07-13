@@ -1,0 +1,16 @@
+# Move this file to /etc/systemd/system/te-m-pi.service
+# and enable with: systemctl enable te-m-pi.service
+
+[Unit]
+Description=Te-M-Pi Temperature monitor
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/te-m-pi
+ExecStart=/home/pi/te-m-pi/te-m-pi.py
+User=pi
+Group=pi
+
+[Install]
+WantedBy=default.target
