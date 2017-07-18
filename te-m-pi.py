@@ -152,23 +152,24 @@ if __name__ == "__main__":
 
     w1 = w1therm()
     nx = nextion(port="/dev/ttyAMA0")
-    iot = awsiot(endpoint, client_id, root_ca, cert, key)
     adc = Adafruit_ADS1x15.ADS1115()
+
+    iot = awsiot(endpoint, client_id, root_ca, cert, key)
 
     update_readings()
 
     nx.send("t0.font=7")
-    nx.send("t1.font=3")
+    nx.send("t1.font=2")
     nx.send("t2.font=2")
 
     while True:
         val="%0.1f C" % (w1.readings[w1.thermometers[0]])
         nx.send("t0.txt=\"%s\"" % val)
 
-        val="Probe:"
+        val=w1.thermometers[0]
         nx.send("t1.txt=\"%s\"" % val)
 
-        val=w1.thermometers[0]
+        val="M. Ludvig, e-IT"
         nx.send("t2.txt=\"%s\"" % val)
 
         val = datetime.strftime(datetime.now(), "%Y/%m/%d %H:%M")
