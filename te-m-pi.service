@@ -3,12 +3,17 @@
 
 [Unit]
 Description=Te-M-Pi Temperature monitor
-After=network.target
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 Type=simple
 WorkingDirectory=/home/pi/te-m-pi
 ExecStart=/home/pi/te-m-pi/te-m-pi.py
+
+RestartSec=10s
+Restart=on-failure
+
 User=pi
 Group=pi
 
