@@ -118,7 +118,9 @@ def get_rpi_serial_number():
     return serial
 
 def update_readings():
-    Timer(10, update_readings).start()
+    t = Timer(10, update_readings)
+    t.daemon = True
+    t.start()
 
     # Temperature probe(s)
     w1.update_readings()
